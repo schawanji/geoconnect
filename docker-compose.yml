@@ -1,0 +1,84 @@
+version: "3.8"
+
+networks:
+  frontend:
+  backend:
+
+services:
+  react-app:
+    build: 
+      context: ./maplinker
+    container_name: maplinker
+    ports:
+      - "3000:80"
+    networks:
+      - frontend
+      - backend
+    depends_on:
+      - flask-app
+      - geoserver
+      - postgres
+    volumes:
+      - ./maplinker:/app # Mount local directory to container
+
+  flask-app:
+    build: 
+      context: ./geofusion
+    container_name: geofusion  
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=development
+    networks:
+      - frontend
+      - backend
+    depends_on:
+      - postgres
+    volumes:
+      - ./geofusion:/app # Mount local directory to container
+      
+  geoserver:
+    image: kartoza/geoserver:latest
+    container_name: geoconnect-geoserver
+    ports:
+      - "8081:8080"
+    volumes:
+      - geoserver-data:/opt/geoserver/data_dir
+    environment:
+      - GEOSERVER_DATA_DIR=/opt/geoserver/data_dir
+      - GEOSERVER_ADMIN_USER=admin
+      - GEOSERVER_ADMIN_PASSWORD=geoserver
+    networks:
+      - backend
+
+  postgres:
+    image: postgis/postgis:15-3.3
+    container_name: geoconnect-postgres
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_PASSWORD=12345
+      - POSTGRES_USER=geoconnect
+      - POSTGRES_DB=geoconnect
+      - PGDATA=/var/lib/postgresql/data
+    networks:
+      - backend    
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@admin.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    ports:
+      - "8080:80"
+    depends_on:
+      - postgres
+    networks:
+      - backend
+
+volumes:
+  postgres-data:
+  geoserver-data:
